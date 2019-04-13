@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">NestScrolledPullToRecycler</string>
+    <string name="updated_at">上次更新于%1$s前</string>
+    <string name="pull_to_refresh_header_hint_normal">下拉可以刷新</string>
+    <string name="loading">正在加载</string>
+    <string name="pull_to_refresh_header_hint_ready">松开后刷新</string>
+    <string name="pull_to_refresh_header_hint_normal2">上拉可以刷新</string>
+    <string name="pushmsg_center_no_more_msg">没有更多内容显示</string>
+    <string name="half_loding">努力加载中</string>
+    <string name="pushmsg_center_pull_down_update_time">最后更新时间</string>
+
+</resources>
