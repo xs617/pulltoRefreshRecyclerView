@@ -24,6 +24,7 @@ public class MyRecyclerView extends RecyclerView {
 
     public MyRecyclerView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+        this.setNestedScrollingEnabled(true);
     }
 
     @Override

@@ -61,7 +61,7 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         Log.e(TAG, "onTouchEvent:");
-        return true;
+        return super.onTouchEvent(ev);
     }
 
     @Override
@@ -140,6 +140,7 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
             default:
                 break;
         }
+        offset = 0;
     }
 
     @Override
@@ -150,43 +151,48 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
     }
 
     int offset;
-    int[] headLocation = new int[2];
-    int[] footerLocation = new int[2];
-    int[] pullToRefreshLocation = new int[2];
-
-    int[] mParentConsume = new int[2];
-    int[] mOffsetInWindow = new int[2];
 
     @Override
     public void onNestedPreScroll(@NonNull View target, int dx, int dy, @NonNull int[] consumed,
                                   int type) {
-        this.dispatchNestedPreScroll(dx, dy, mParentConsume, mOffsetInWindow, type);
+        consumed[0] = 0;
+        consumed[1] = 0;
+        int[] headLocation = new int[2];
+        int[] footerLocation = new int[2];
+        int[] pullToRefreshLocation = new int[2];
+        int[] mParentConsume = new int[2];
+        int[] mOffsetInWindow = new int[2];
 
-        int parentUnconsumedDy = dy - mParentConsume[1];
-
-        if (consumed.length <= 1) {
-            Log.e(TAG, "consumed 数组长度异常");
-            return;
+        if (this.dispatchNestedPreScroll(dx, dy, mParentConsume, mOffsetInWindow, type)) {
+            consumed[0] += mParentConsume[0];
+            consumed[1] += mParentConsume[1];
+            dx -= mParentConsume[0];
+            dy -= mParentConsume[1];
         }
+
         getHeaderLoadingLayout().getLocationOnScreen(headLocation);
         getFooterLoadingLayout().getLocationOnScreen(footerLocation);
         this.getLocationOnScreen(pullToRefreshLocation);
-
         offset = headLocation[1] - pullToRefreshLocation[1] + getHeaderLoadingLayout().getMeasuredHeight();
-        Log.e(TAG, "dy :" + dy + " offset :" + offset + " ,parentUnconsumedDy :" + parentUnconsumedDy + " type :" + type + " parentConsume :" + mParentConsume[1]);
-        int pullDy = (int) (parentUnconsumedDy / OFFSET_RADIO);
-        if (parentUnconsumedDy > 0) {
+
+        Log.e(TAG, "dy :" + dy + " offset :" + offset + " ,parentUnconsumedDy :" + dy + " type :" + type + " parentConsume :" + mParentConsume[1]);
+        int pullDy = (int) (dy / OFFSET_RADIO);
+        if (dy > 0) {
             //上拉
             //如果header已经拉出来了一部分,把拉出来的收回去
             if (offset > 0) {
-                resumeHeader(offset, parentUnconsumedDy, consumed);
+                int headerConsume = offset - dy > 0 ? dy : offset;
+                pullHeaderLayout(headerConsume * -1);
+                consumed[1] += headerConsume;
+                dy -= headerConsume;
             } else {
                 if (isPullLoadEnabled() && isReadyForPullUp()) {
                     switch (type) {
                         case TYPE_TOUCH:
                             int pullY = getFooterLoadingLayout().getMeasuredHeight() + offset - pullDy > 0 ? pullDy * -1 : (getFooterLoadingLayout().getMeasuredHeight() + offset) * -1;
                             pullFooterLayout(pullY);
-                            consumed[1] = dy;
+                            consumed[1] += dy;
+                            dy = 0;
                             Log.e(TAG, "consumed up:" + consumed[1]);
                             break;
                         case TYPE_NON_TOUCH:
@@ -197,22 +203,26 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                     }
                 }
                 if (isSkipFling) {
-                    consumed[1] = dy;
+                    consumed[1] = +dy;
+                    dy = 0;
                     Log.e(TAG, "consumed fling:" + consumed[1]);
                 }
             }
-        } else if (parentUnconsumedDy < 0) {
+        } else if (dy < 0) {
             //下拉
             //如果footer已经拉出来了一部分，把拉出来的收回去
             if (offset < 0) {
-                resumeFooter(offset, parentUnconsumedDy, consumed);
+                int footerConsume = offset - dy < 0 ? dy : offset;
+                pullFooterLayout(footerConsume * -1);
+                dy -= footerConsume;
+                consumed[1] += footerConsume;
             } else {
                 if (isPullRefreshEnabled() && isReadyForPullDown()) {
                     switch (type) {
                         case TYPE_TOUCH:
                             int pullY = getHeaderLoadingLayout().getMeasuredHeight() - (offset - pullDy) > 0 ? pullDy * -1 : (getHeaderLoadingLayout().getMeasuredHeight() - offset);
                             pullHeaderLayout(pullY);
-                            consumed[1] = dy;
+                            consumed[1] = +dy;
                             Log.e(TAG, "consumed down:" + consumed[1]);
                             break;
                         case TYPE_NON_TOUCH:
@@ -223,22 +233,12 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                     }
                 }
                 if (isSkipFling) {
-                    consumed[1] = dy;
+                    consumed[1] = +dy;
                     Log.e(TAG, "consumed Fling:" + consumed[1]);
                 }
             }
         }
-    }
 
-    private void resumeHeader(int offset, int dy, int[] consumed) {
-        int headerConsume = offset - dy > 0 ? dy : offset;
-        pullHeaderLayout(headerConsume * -1);
-        consumed[1] = headerConsume;
-    }
-
-    private void resumeFooter(int offset, int dy, int[] consumed) {
-        int footerConsume = offset - dy < 0 ? dy : offset;
-        pullFooterLayout(footerConsume * -1);
-        consumed[1] = footerConsume;
+        dispatchNestedScroll(consumed[0], consumed[1], dx - consumed[0], dy - consumed[1], mOffsetInWindow, type);
     }
 }
