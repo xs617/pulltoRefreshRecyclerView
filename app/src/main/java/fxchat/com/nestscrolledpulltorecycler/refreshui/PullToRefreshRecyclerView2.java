@@ -223,6 +223,7 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                             int pullY = getHeaderLoadingLayout().getMeasuredHeight() - (offset - pullDy) > 0 ? pullDy * -1 : (getHeaderLoadingLayout().getMeasuredHeight() - offset);
                             pullHeaderLayout(pullY);
                             consumed[1] = +dy;
+                            dy = 0;
                             Log.e(TAG, "consumed down:" + consumed[1]);
                             break;
                         case TYPE_NON_TOUCH:
@@ -234,11 +235,12 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                 }
                 if (isSkipFling) {
                     consumed[1] = +dy;
+                    dy = 0;
                     Log.e(TAG, "consumed Fling:" + consumed[1]);
                 }
             }
         }
 
-        dispatchNestedScroll(consumed[0], consumed[1], dx - consumed[0], dy - consumed[1], mOffsetInWindow, type);
+        dispatchNestedScroll(consumed[0], consumed[1], dx, dy, mOffsetInWindow, type);
     }
 }
