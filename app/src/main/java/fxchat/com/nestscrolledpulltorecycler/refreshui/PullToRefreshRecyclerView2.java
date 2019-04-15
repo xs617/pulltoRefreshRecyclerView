@@ -23,6 +23,7 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
     NestedScrollingParentHelper mParentHelper = new NestedScrollingParentHelper(this);
 
     final String TAG = "PullToRefresh";
+    INestedPullTrigger iNestedPullTrigger;
 
     public PullToRefreshRecyclerView2(Context context) {
         this(context, null);
@@ -42,10 +43,11 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent event) {
-        Log.e(TAG, "onInterceptTouchEvent:");
+//        Log.e(TAG, "PullToRefreshRecyclerView2 onInterceptTouchEvent:");
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 mLastY = event.getY();
+                startNestedScroll(ViewCompat.SCROLL_AXIS_VERTICAL, 0);
                 break;
             case MotionEvent.ACTION_MOVE:
                 break;
@@ -60,50 +62,48 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        Log.e(TAG, "onTouchEvent:");
+//        Log.e(TAG, "PullToRefreshRecyclerView2 onTouchEvent:");
         return super.onTouchEvent(ev);
     }
 
     @Override
     public boolean startNestedScroll(int axes, int type) {
-        Log.e(TAG, "startNestedScroll:");
+//        Log.e(TAG, "PullToRefreshRecyclerView2 startNestedScroll:");
         return mChildHelper.startNestedScroll(axes);
     }
 
     @Override
     public void stopNestedScroll(int type) {
-        Log.e(TAG, "stopNestedScroll:");
-        mChildHelper.stopNestedScroll();
+//        Log.e(TAG, "PullToRefreshRecyclerView2 stopNestedScroll:");
+        mChildHelper.stopNestedScroll(type);
     }
 
     @Override
     public boolean hasNestedScrollingParent(int type) {
-        Log.e(TAG, "hasNestedScrollingParent:");
         return mChildHelper.hasNestedScrollingParent();
     }
 
     @Override
     public boolean dispatchNestedScroll(int dxConsumed, int dyConsumed, int dxUnconsumed, int dyUnconsumed, int[] offsetInWindow, int type) {
-        Log.e(TAG, "dispatchNestedScroll:");
-        return mChildHelper.dispatchNestedScroll(dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed,
-                offsetInWindow);
+//        Log.e(TAG, "PullToRefreshRecyclerView2 dispatchNestedScroll:");
+        return mChildHelper.dispatchNestedScroll(dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed, offsetInWindow);
     }
 
     @Override
     public boolean dispatchNestedPreScroll(int dx, int dy, int[] consumed, int[] offsetInWindow, int type) {
-        Log.e(TAG, "dispatchNestedPreScroll:");
-        return mChildHelper.dispatchNestedPreScroll(dx, dy, consumed, offsetInWindow);
+//        Log.e(TAG, "PullToRefreshRecyclerView2 dispatchNestedPreScroll:");
+        return mChildHelper.dispatchNestedPreScroll(dx, dy, consumed, offsetInWindow, type);
     }
 
     @Override
     public boolean onStartNestedScroll(@NonNull View child, @NonNull View target, int axes, int type) {
-        Log.e(TAG, "onStartNestedScroll:");
+//        Log.e(TAG, "PullToRefreshRecyclerView2 onStartNestedScroll:");
         return (axes & ViewCompat.SCROLL_AXIS_VERTICAL) != 0;
     }
 
     @Override
     public void onNestedScrollAccepted(@NonNull View child, @NonNull View target, int axes, int type) {
-        Log.e(TAG, "onNestedScrollAccepted :");
+//        Log.e(TAG, "PullToRefreshRecyclerView2 onNestedScrollAccepted :");
         isSkipFling = false;
         mParentHelper.onNestedScrollAccepted(child, target, axes);
         startNestedScroll(axes, type);
@@ -111,12 +111,12 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
 
     @Override
     public void onStopNestedScroll(@NonNull View target, int type) {
-        Log.e(TAG, "onStopNestedScroll :");
-        stopNestedScroll(type);
+//        Log.e(TAG, "PullToRefreshRecyclerView2  onStopNestedScroll :");
         mParentHelper.onStopNestedScroll(target);
+        stopNestedScroll(type);
         switch (type) {
             case TYPE_TOUCH:
-                Log.e(TAG, "onStopNestedScroll Touch :" + offset);
+                Log.e(TAG, "PullToRefreshRecyclerView2 onStopNestedScroll Touch :" + offset);
                 if (offset < 0) {
                     if (offset <= getFooterLoadingLayout().getMeasuredHeight() * -1) {
                         //上拉到最大，开始loading
@@ -135,7 +135,7 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                 }
                 break;
             case TYPE_NON_TOUCH:
-                Log.e(TAG, "onStopNestedScroll  Fling");
+                Log.e(TAG, "PullToRefreshRecyclerView2 onStopNestedScroll  Fling");
                 break;
             default:
                 break;
@@ -146,36 +146,23 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
     @Override
     public void onNestedScroll(View target, int dxConsumed, int dyConsumed, int dxUnconsumed,
                                int dyUnconsumed, int type) {
-        Log.e(TAG, "onNestedScroll :");
+//        Log.e(TAG, "PullToRefreshRecyclerView2 onNestedScroll :");
 
-    }
-
-    int offset;
-
-    @Override
-    public void onNestedPreScroll(@NonNull View target, int dx, int dy, @NonNull int[] consumed,
-                                  int type) {
-        consumed[0] = 0;
-        consumed[1] = 0;
+        int dx = dxUnconsumed;
+        int dy = dyUnconsumed;
+        int myConsumeX = 0;
+        int myConsumeY = 0;
         int[] headLocation = new int[2];
         int[] footerLocation = new int[2];
         int[] pullToRefreshLocation = new int[2];
-        int[] mParentConsume = new int[2];
         int[] mOffsetInWindow = new int[2];
-
-        if (this.dispatchNestedPreScroll(dx, dy, mParentConsume, mOffsetInWindow, type)) {
-            consumed[0] += mParentConsume[0];
-            consumed[1] += mParentConsume[1];
-            dx -= mParentConsume[0];
-            dy -= mParentConsume[1];
-        }
 
         getHeaderLoadingLayout().getLocationOnScreen(headLocation);
         getFooterLoadingLayout().getLocationOnScreen(footerLocation);
         this.getLocationOnScreen(pullToRefreshLocation);
         offset = headLocation[1] - pullToRefreshLocation[1] + getHeaderLoadingLayout().getMeasuredHeight();
 
-        Log.e(TAG, "dy :" + dy + " offset :" + offset + " ,parentUnconsumedDy :" + dy + " type :" + type + " parentConsume :" + mParentConsume[1]);
+        Log.e(TAG, "dy :" + dy + " offset :" + offset + " ,parentConsumedDy :" + dyConsumed + " type :" + type);
         int pullDy = (int) (dy / OFFSET_RADIO);
         if (dy > 0) {
             //上拉
@@ -183,7 +170,7 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
             if (offset > 0) {
                 int headerConsume = offset - dy > 0 ? dy : offset;
                 pullHeaderLayout(headerConsume * -1);
-                consumed[1] += headerConsume;
+                myConsumeY += headerConsume;
                 dy -= headerConsume;
             } else {
                 if (isPullLoadEnabled() && isReadyForPullUp()) {
@@ -191,9 +178,9 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                         case TYPE_TOUCH:
                             int pullY = getFooterLoadingLayout().getMeasuredHeight() + offset - pullDy > 0 ? pullDy * -1 : (getFooterLoadingLayout().getMeasuredHeight() + offset) * -1;
                             pullFooterLayout(pullY);
-                            consumed[1] += dy;
+                            myConsumeY += dy;
                             dy = 0;
-                            Log.e(TAG, "consumed up:" + consumed[1]);
+//                            Log.e(TAG, "consumed up:" + myConsumeY);
                             break;
                         case TYPE_NON_TOUCH:
                             isSkipFling = true;
@@ -203,9 +190,9 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                     }
                 }
                 if (isSkipFling) {
-                    consumed[1] = +dy;
+                    myConsumeY = +dy;
                     dy = 0;
-                    Log.e(TAG, "consumed fling:" + consumed[1]);
+//                    Log.e(TAG, "consumed fling:" + myConsumeY);
                 }
             }
         } else if (dy < 0) {
@@ -215,16 +202,16 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                 int footerConsume = offset - dy < 0 ? dy : offset;
                 pullFooterLayout(footerConsume * -1);
                 dy -= footerConsume;
-                consumed[1] += footerConsume;
+                myConsumeY += footerConsume;
             } else {
                 if (isPullRefreshEnabled() && isReadyForPullDown()) {
                     switch (type) {
                         case TYPE_TOUCH:
                             int pullY = getHeaderLoadingLayout().getMeasuredHeight() - (offset - pullDy) > 0 ? pullDy * -1 : (getHeaderLoadingLayout().getMeasuredHeight() - offset);
                             pullHeaderLayout(pullY);
-                            consumed[1] = +dy;
+                            myConsumeY = +dy;
                             dy = 0;
-                            Log.e(TAG, "consumed down:" + consumed[1]);
+//                            Log.e(TAG, "consumed down:" + myConsumeY);
                             break;
                         case TYPE_NON_TOUCH:
                             isSkipFling = true;
@@ -234,13 +221,27 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
                     }
                 }
                 if (isSkipFling) {
-                    consumed[1] = +dy;
+                    myConsumeY = +dy;
                     dy = 0;
-                    Log.e(TAG, "consumed Fling:" + consumed[1]);
+//                    Log.e(TAG, "consumed Fling:" + myConsumeY);
                 }
             }
         }
+        Log.e(TAG, "myConsumeY :" + myConsumeY + " dy :" + dy + " type :" + type);
+        dispatchNestedScroll(myConsumeX, myConsumeY, dx, dy, mOffsetInWindow, type);
+    }
 
-        dispatchNestedScroll(consumed[0], consumed[1], dx, dy, mOffsetInWindow, type);
+    int offset;
+
+    @Override
+    public void onNestedPreScroll(@NonNull View target, int dx, int dy, @NonNull int[] consumed,
+                                  int type) {
+//        Log.e(TAG, "PullToRefreshRecyclerView2 onNestedPreScroll :");
+        Log.e(TAG, "onNestedPreScroll dy :" + dy + " type :" + type);
+        dispatchNestedPreScroll(dx, dy, consumed, null, type);
+    }
+
+    public void setNestedPullTrigger(INestedPullTrigger iNestedPullTrigger) {
+        this.iNestedPullTrigger = iNestedPullTrigger;
     }
 }

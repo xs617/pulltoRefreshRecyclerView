@@ -9,22 +9,21 @@
         android:layout_height="match_parent"
         android:fillViewport="true">
 
-        <LinearLayout
+        <com.test.MyLinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <TextView
+            <com.test.MyLinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="400dp"
-                android:background="@color/colorAccent"
-                />
-            <!--<android.support.v7.widget.RecyclerView-->
+                android:background="@color/colorAccent" />
+            <!--<com.test.MyRecyclerView-->
             <fxchat.com.nestscrolledpulltorecycler.refreshui.PullToRefreshRecyclerView2
                 android:id="@+id/recycler"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
-        </LinearLayout>
+        </com.test.MyLinearLayout>
 
     </com.test.MyNestedScrollView>
 </LinearLayout>
