@@ -2,6 +2,7 @@ package fxchat.com.nestscrolledpulltorecycler.refreshui;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
@@ -221,47 +222,52 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
         mHeaderHeight = headerHeight;
         mFooterHeight = footerHeight;
 
-//        Log.e("PullToRefresh","headerHeight " + mHeaderHeight + " footerHeight :" + footerHeight);
-        // 这里得到Header和Footer的高度，设置的padding的top和bottom就应该是header和footer的高度
-        // 因为header和footer是完全看不见的
-//        headerHeight = (null != mHeaderLayout) ? mHeaderLayout.getMeasuredHeight() : 0;
-//        footerHeight = (null != mFooterLayout) ? mFooterLayout.getMeasuredHeight() : 0;
-//        if (0 == footerHeight) {
-//            footerHeight = mFooterHeight;
-//        }
+        Log.e("PullToRefresh","headerHeight " + mHeaderHeight + " footerHeight :" + footerHeight);
+//         这里得到Header和Footer的高度，设置的padding的top和bottom就应该是header和footer的高度
+//         因为header和footer是完全看不见的
+        headerHeight = (null != mHeaderLayout) ? mHeaderLayout.getMeasuredHeight() : 0;
+        footerHeight = (null != mFooterLayout) ? mFooterLayout.getMeasuredHeight() : 0;
+        if (0 == footerHeight) {
+            footerHeight = mFooterHeight;
+        }
 
-//        int pLeft = getPaddingLeft();
-//        int pTop = getPaddingTop();
-//        int pRight = getPaddingRight();
-//        int pBottom = getPaddingBottom();
-//
-//        pTop = -headerHeight;
-//        pBottom = -footerHeight;
-//
-//        setPadding(pLeft, pTop, pRight, pBottom);
+        int pLeft = getPaddingLeft();
+        int pTop = getPaddingTop();
+        int pRight = getPaddingRight();
+        int pBottom = getPaddingBottom();
+
+        pTop = -headerHeight;
+        pBottom = -footerHeight;
+        MarginLayoutParams marginTopLayoutParams = (MarginLayoutParams) getHeaderLoadingLayout().getLayoutParams();
+        marginTopLayoutParams.topMargin = -headerHeight;
+
+        MarginLayoutParams marginBottomLayoutParams = (MarginLayoutParams) getHeaderLoadingLayout().getLayoutParams();
+        marginBottomLayoutParams.topMargin = -footerHeight;
+        getHeaderLoadingLayout().setLayoutParams(marginTopLayoutParams);
+        getFooterLoadingLayout().setLayoutParams(marginBottomLayoutParams);
     }
 
-//    @Override
-//    protected final void onSizeChanged(int w, int h, int oldw, int oldh) {
-//        super.onSizeChanged(w, h, oldw, oldh);
-//
-//        // We need to update the header/footer when our size changes
-//        refreshLoadingViewsSize();
-//
-//        // 设置刷新View的大小
-//        refreshRefreshableViewSize(w, h);
-//
-//        /**
-//         * As we're currently in a Layout Pass, we need to schedule another one
-//         * to layout any changes we've made here
-//         */
-//        post(new Runnable() {
-//            @Override
-//            public void run() {
-//                requestLayout();
-//            }
-//        });
-//    }
+    @Override
+    protected final void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+
+        // We need to update the header/footer when our size changes
+        refreshLoadingViewsSize();
+
+        // 设置刷新View的大小
+        refreshRefreshableViewSize(w, h);
+
+        /**
+         * As we're currently in a Layout Pass, we need to schedule another one
+         * to layout any changes we've made here
+         */
+        post(new Runnable() {
+            @Override
+            public void run() {
+                requestLayout();
+            }
+        });
+    }
 
 //    @Override
 //    public void setOrientation(int orientation) {
@@ -616,7 +622,7 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
         // 这里把Refresh view的高度设置为一个很小的值，它的高度最终会在onSizeChanged()方法中设置为MATCH_PARENT
         // 这样做的原因是，如果此是它的height是MATCH_PARENT，那么footer得到的高度就是0，所以，我们先设置高度很小
         // 我们就可以得到header和footer的正常高度，当onSizeChanged后，Refresh view的高度又会变为正常。
-//        height = 10;
+        height = 10;
         addView(mRefreshableViewWrapper, new LayoutParams(width, height));
     }
 

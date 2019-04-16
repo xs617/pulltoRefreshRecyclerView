@@ -1,4 +1,4 @@
-package fxchat.com.nestscrolledpulltorecycler.refreshui;
+package com.test;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
@@ -11,41 +11,52 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.LinearLayout;
+
+import fxchat.com.nestscrolledpulltorecycler.refreshui.INestedPullTrigger;
+import fxchat.com.nestscrolledpulltorecycler.refreshui.IPullToRefresh;
+import fxchat.com.nestscrolledpulltorecycler.refreshui.LoadingLayout;
+import fxchat.com.nestscrolledpulltorecycler.refreshui.PullToRefreshBase;
 
 import static android.support.v4.view.ViewCompat.TYPE_NON_TOUCH;
 import static android.support.v4.view.ViewCompat.TYPE_TOUCH;
 
 /**
- * Created by wenjiarong on 2019/4/11 0011.
+ * Created by wenjiarong on 2019/4/15 0015.
  */
-public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implements NestedScrollingChild2, NestedScrollingParent2 {
+public class PullToRefreshRecyclerView<T extends View> extends LinearLayout implements IPullToRefresh<T>, NestedScrollingParent2, NestedScrollingChild2 {
+    final String TAG = "PullToRefresh";
+    private static final float OFFSET_RADIO = 2.5f;
+    boolean isSkipFling = false;
+    int offset;
+
     NestedScrollingChildHelper mChildHelper = new NestedScrollingChildHelper(this);
     NestedScrollingParentHelper mParentHelper = new NestedScrollingParentHelper(this);
-
-    final String TAG = "PullToRefresh";
     INestedPullTrigger iNestedPullTrigger;
 
-    public PullToRefreshRecyclerView2(Context context) {
+    PullToRefreshConfig pullToRefreshConfig;
+
+    public PullToRefreshRecyclerView(Context context) {
         this(context, null);
     }
 
-    public PullToRefreshRecyclerView2(Context context, AttributeSet attrs) {
+    public PullToRefreshRecyclerView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public PullToRefreshRecyclerView2(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-        mChildHelper.setNestedScrollingEnabled(true);
+    public PullToRefreshRecyclerView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        setNestedScrollingEnabled(true);
     }
 
-    float mLastY;
-    boolean isSkipFling = false;
+    public void config(PullToRefreshConfig config) {
+        this.pullToRefreshConfig = config;
+    }
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                mLastY = event.getY();
                 startNestedScroll(ViewCompat.SCROLL_AXIS_VERTICAL, 0);
                 break;
             case MotionEvent.ACTION_MOVE:
@@ -104,19 +115,19 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
             case TYPE_TOUCH:
                 Log.e(TAG, "PullToRefreshRecyclerView2 onStopNestedScroll Touch :" + offset);
                 if (offset < 0) {
-                    if (offset <= getFooterLoadingLayout().getMeasuredHeight() * -1) {
+                    if (offset <= pullToRefreshConfig.iPullToRefreshOperator.getView(PullViewType.FOOTER).getMeasuredHeight() * -1) {
                         //上拉到最大，开始loading
-                        startLoading();
+                        pullToRefreshConfig.iPullToRefreshOperator.startDoingAnimation(PullViewType.FOOTER);
                     } else {
-                        resetFooterLayout();
+                        pullToRefreshConfig.iPullToRefreshOperator.reset(PullViewType.FOOTER);
                     }
                 }
                 if (offset > 0) {
-                    if (offset >= getHeaderLoadingLayout().getMeasuredHeight()) {
+                    if (offset >= pullToRefreshConfig.iPullToRefreshOperator.getView(PullViewType.HEADER).getMeasuredHeight()) {
                         //下拉到最大，开始refreshing
-                        startRefreshing();
+                        pullToRefreshConfig.iPullToRefreshOperator.startDoingAnimation(PullViewType.HEADER);
                     } else {
-                        resetHeaderLayout();
+                        pullToRefreshConfig.iPullToRefreshOperator.reset(PullViewType.HEADER);
                     }
                 }
                 break;
@@ -141,10 +152,12 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
         int[] pullToRefreshLocation = new int[2];
         int[] mOffsetInWindow = new int[2];
 
-        getHeaderLoadingLayout().getLocationOnScreen(headLocation);
-        getFooterLoadingLayout().getLocationOnScreen(footerLocation);
+        View header = pullToRefreshConfig.iPullToRefreshOperator.getView(PullViewType.HEADER);
+        View footer = pullToRefreshConfig.iPullToRefreshOperator.getView(PullViewType.FOOTER);
+        header.getLocationOnScreen(headLocation);
+        footer.getLocationOnScreen(footerLocation);
         this.getLocationOnScreen(pullToRefreshLocation);
-        offset = headLocation[1] - pullToRefreshLocation[1] + getHeaderLoadingLayout().getMeasuredHeight();
+        offset = headLocation[1] - pullToRefreshLocation[1] + header.getMeasuredHeight();
 
         Log.e(TAG, "dy :" + dy + " offset :" + offset + " ,parentConsumedDy :" + dyConsumed + " type :" + type);
         int pullDy = (int) (dy / OFFSET_RADIO);
@@ -153,15 +166,15 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
             //如果header已经拉出来了一部分,把拉出来的收回去
             if (offset > 0) {
                 int headerConsume = offset - dy > 0 ? dy : offset;
-                pullHeaderLayout(headerConsume * -1);
+                pullToRefreshConfig.iPullToRefreshOperator.pull(PullViewType.HEADER, headerConsume * -1);
                 myConsumeY += headerConsume;
                 dy -= headerConsume;
             } else {
-                if (isPullLoadEnabled() && isReadyForPullUp()) {
+                if (isPullLoadEnabled() && pullToRefreshConfig.iPullToRefreshIndicator.isReady(PullOperatorType.PULL_UP)) {
                     switch (type) {
                         case TYPE_TOUCH:
-                            int pullY = getFooterLoadingLayout().getMeasuredHeight() + offset - pullDy > 0 ? pullDy * -1 : (getFooterLoadingLayout().getMeasuredHeight() + offset) * -1;
-                            pullFooterLayout(pullY);
+                            int pullY = footer.getMeasuredHeight() + offset - pullDy > 0 ? pullDy * -1 : (footer.getMeasuredHeight() + offset) * -1;
+                            pullToRefreshConfig.iPullToRefreshOperator.pull(PullViewType.FOOTER, pullY);
                             myConsumeY += dy;
                             dy = 0;
 //                            Log.e(TAG, "consumed up:" + myConsumeY);
@@ -184,15 +197,15 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
             //如果footer已经拉出来了一部分，把拉出来的收回去
             if (offset < 0) {
                 int footerConsume = offset - dy < 0 ? dy : offset;
-                pullFooterLayout(footerConsume * -1);
+                pullToRefreshConfig.iPullToRefreshOperator.pull(PullViewType.FOOTER, footerConsume * -1);
                 dy -= footerConsume;
                 myConsumeY += footerConsume;
             } else {
-                if (isPullRefreshEnabled() && isReadyForPullDown()) {
+                if (isPullRefreshEnabled() && pullToRefreshConfig.iPullToRefreshIndicator.isReady(PullOperatorType.PULL_DOWN)) {
                     switch (type) {
                         case TYPE_TOUCH:
-                            int pullY = getHeaderLoadingLayout().getMeasuredHeight() - (offset - pullDy) > 0 ? pullDy * -1 : (getHeaderLoadingLayout().getMeasuredHeight() - offset);
-                            pullHeaderLayout(pullY);
+                            int pullY = header.getMeasuredHeight() - (offset - pullDy) > 0 ? pullDy * -1 : (header.getMeasuredHeight() - offset);
+                            pullToRefreshConfig.iPullToRefreshOperator.pull(PullViewType.HEADER, pullY);
                             myConsumeY = +dy;
                             dy = 0;
 //                            Log.e(TAG, "consumed down:" + myConsumeY);
@@ -215,8 +228,6 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
         dispatchNestedScroll(myConsumeX, myConsumeY, dx, dy, mOffsetInWindow, type);
     }
 
-    int offset;
-
     @Override
     public void onNestedPreScroll(@NonNull View target, int dx, int dy, @NonNull int[] consumed,
                                   int type) {
@@ -225,5 +236,71 @@ public class PullToRefreshRecyclerView2 extends PullToRefreshRecyclerView implem
 
     public void setNestedPullTrigger(INestedPullTrigger iNestedPullTrigger) {
         this.iNestedPullTrigger = iNestedPullTrigger;
+    }
+
+
+    @Override
+    public void setPullRefreshEnabled(boolean pullRefreshEnabled) {
+        pullToRefreshConfig.iPullToRefreshIndicator.setEnable(PullOperatorType.PULL_DOWN, pullRefreshEnabled);
+    }
+
+    @Override
+    public void setPullLoadEnabled(boolean pullLoadEnabled) {
+        pullToRefreshConfig.iPullToRefreshIndicator.setEnable(PullOperatorType.PULL_UP, pullLoadEnabled);
+    }
+
+    @Override
+    public void setScrollLoadEnabled(boolean scrollLoadEnabled) {
+        pullToRefreshConfig.iPullToRefreshIndicator.setEnable(PullOperatorType.BOTTOM_TRIGGER, scrollLoadEnabled);
+    }
+
+    @Override
+    public boolean isPullRefreshEnabled() {
+        return pullToRefreshConfig.iPullToRefreshIndicator.isEnable(PullOperatorType.PULL_DOWN);
+    }
+
+    @Override
+    public boolean isPullLoadEnabled() {
+        return pullToRefreshConfig.iPullToRefreshIndicator.isEnable(PullOperatorType.PULL_UP);
+    }
+
+    @Override
+    public boolean isScrollLoadEnabled() {
+        return pullToRefreshConfig.iPullToRefreshIndicator.isEnable(PullOperatorType.BOTTOM_TRIGGER);
+    }
+
+    @Override
+    public void setOnRefreshListener(PullToRefreshBase.OnRefreshListener<T> refreshListener) {
+
+    }
+
+    @Override
+    public void onPullDownRefreshComplete() {
+
+    }
+
+    @Override
+    public void onPullUpRefreshComplete() {
+
+    }
+
+    @Override
+    public T getRefreshableView() {
+        return null;
+    }
+
+    @Override
+    public LoadingLayout getHeaderLoadingLayout() {
+        return null;
+    }
+
+    @Override
+    public LoadingLayout getFooterLoadingLayout() {
+        return null;
+    }
+
+    @Override
+    public void setLastUpdatedLabel(CharSequence label) {
+
     }
 }
